@@ -1,9 +1,9 @@
 # Analysis plan
 
-**Status: DRAFT for GATE 2, submitted 9 Oct 2026. Not yet frozen.** It freezes when Mark
-approves it at GATE 2, and in any case before any outcome model is fitted. After the freeze,
-every change is appended to the changelog with date and reason, and every result is labelled
-**confirmatory** (pre-specified here) or **exploratory**.
+**Status: FROZEN on 9 Oct 2026 (GATE 2, approved by Mark).** The freeze commit is the first
+commit that contains this line, and it precedes every run of the outcome code (verifiable in git
+history). Every change after this point is appended to the changelog with date and reason, and
+every result is labelled **confirmatory** (pre-specified here) or **exploratory**.
 
 ## 0. What has and has not been seen before writing this plan
 *Seen (no outcome association):* loss counts, the distributions of D(t), T_r, censoring and
@@ -91,6 +91,8 @@ danger in (ℓ, 15 s]. **Primary ℓ = 3 s**; secondary ℓ = 6 s.
     its published description. *Pending:* the paper is not reachable from this environment. If
     the description is not available at the freeze, baseline c is dropped and reported as not
     done. It will not be replaced post hoc.
+    **At the freeze (9 Oct 2026) the description was not available (network policy blocks the
+    publisher), so baseline c is dropped.**
 * *Primary comparison:* out-of-fold log-loss of M_D − M_cov, with a 95% match-cluster bootstrap
   CI (2,000). Adds value if the upper bound is < 0.
 * *Secondary:* M_D vs M_compact and M_D vs M_phase, head-to-head and as additions
@@ -130,3 +132,4 @@ logged below and in `DECISIONS.md`, and results affected by a deviation are labe
 - 2026-10-09: Phase 1 notes added (no outcome data used).
 - 2026-10-09: full draft for GATE 2 (landmark design, outcome definition, H1–H5 tests, CV
   protocol, sensitivity grid). Still no outcome data used.
+- 2026-10-09: **FROZEN** (GATE 2 approved). Baseline c (rβ) dropped under the rule above.

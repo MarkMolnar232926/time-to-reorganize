@@ -112,13 +112,13 @@ outcome model. *(provisional)*
 Alternatives: regress danger on T_r directly (the brief's H2 wording); time-varying Cox model.
 Danger shortens or ends the observation of reorganisation, so T_r as a predictor of danger is
 biased (immortal time / reverse causation). Landmarking measures exposure before the outcome
-window. The time-varying Cox model is kept as exploratory. *(proposed for GATE 2)*
+window. The time-varying Cox model is kept as exploratory. *(approved at GATE 2, 9 Oct)*
 
 **D-018. "Dangerous attack" = opponent shot or box entry (≥ 0.2 s inside the penalty area,
 entering from outside) within 15 s, while the opponent still has the ball in open play.**
 Alternatives: shots only (too rare for 20 games, so expected to be underpowered, though not
 checked); EPV/xThreat from the event file (a model-based outcome adds another model's error and is
-less transparent to coaches). *(proposed for GATE 2)*
+less transparent to coaches). *(approved at GATE 2, 9 Oct)*
 
 **D-019. Added `statsmodels` (GLM, cluster-robust covariance) as a dependency.** A standard,
 CPU-only, widely used package. It avoids hand-written estimators for the confirmatory models.

@@ -1,6 +1,6 @@
 # Status
 
-_Last updated: 9 Oct 2026. GATE 1 passed. Phase 2: **analysis plan drafted, waiting at GATE 2.**_
+_Last updated: 9 Oct 2026. GATE 2 passed: **ANALYSIS_PLAN.md frozen**. Running the confirmatory analyses._
 
 ## Done
 - Repo skeleton: `src/reorg/` package, `pyproject.toml` + `uv.lock`, `config.yaml`, tests, CI,
@@ -43,7 +43,7 @@ _Last updated: 9 Oct 2026. GATE 1 passed. Phase 2: **analysis plan drafted, wait
   split-half, H2 cluster-bootstrap OR, H4 leave-one-match-out comparison, H3 shares). All tested
   on synthetic data only, and **not run on real data**. Public API `reorg.run_league` etc. +
   `reorg episodes` CLI; end-to-end synthetic smoke test in CI. 48 tests.
-- **Waiting at GATE 2:** your review of `ANALYSIS_PLAN.md`.
+- GATE 2 passed 9 Oct: plan frozen (baseline c / rβ dropped per the plan rule).
 - After the freeze: the per-fold reference rebuild for H4, then running H1–H5.
 
 ## Blockers / questions for Mark
