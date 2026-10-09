@@ -30,8 +30,8 @@ _Last updated: 9 Oct 2026. GATE 0 passed (D-004, D-006 approved). Phase 1 protot
   `viz` (snapshots, D curves, CIF, MP4 animations). 32 tests.
 - `scripts/phase1_prototype.py` → `docs/gate1_generated.md` + `outputs/phase1/` (18 face-validity
   animations from 2007721). Whole league in ~2 min without animations.
-- Headline: 2,031 disorganised-at-loss episodes. Reorganised by 6 s: 30% [28, 32]. Regain first by
-  6 s: 37%. Caveats: team-specific references are weakly reproducible, and team-level reliability
+- Headline: 2,031 disorganised-at-loss episodes. Reorganised by 6 s: 30% [28, 31]. Regain first by
+  6 s: 33%. Caveats: team-specific references are weakly reproducible, and team-level reliability
   of the metric is not yet shown (see report).
 
 ## Next

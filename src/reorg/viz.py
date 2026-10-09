@@ -278,6 +278,7 @@ def plot_d_curves(
 def plot_cif(cif, path=None, title: str | None = None, label_suffix: str = ""):
     """Cumulative incidence of reorganisation and of regain (competing), with bands if present."""
     fig, ax = plt.subplots(figsize=(7, 4))
+    end_vals: dict[int, float] = {}
     for c, col, lab in ((1, DEF, "reorganised"), (2, ATT, "regained first (competing)")):
         ax.step(cif["t"], cif[f"cif_{c}"], where="post", color=col, lw=2, label=lab + label_suffix)
         if f"cif_{c}_lo" in cif:
@@ -290,13 +291,13 @@ def plot_cif(cif, path=None, title: str | None = None, label_suffix: str = ""):
                 alpha=0.15,
                 lw=0,
             )
-        ax.text(
-            cif["t"].iloc[-1],
-            cif[f"cif_{c}"].iloc[-1],
-            f"  {cif[f'cif_{c}'].iloc[-1]:.2f}",
-            va="center",
-            color=INK_2,
-        )
+        end_vals[c] = cif[f"cif_{c}"].iloc[-1]
+    # End labels, nudged apart when the curves finish close together.
+    gap = 0.04
+    (c1, v1), (c2, v2) = sorted(end_vals.items(), key=lambda kv: kv[1])
+    pos = {c1: v1, c2: max(v2, v1 + gap)}
+    for c, v in end_vals.items():
+        ax.text(cif["t"].iloc[-1], pos[c], f"  {v:.2f}", va="center", color=INK_2)
     ax.set_xlabel("seconds after loss")
     ax.set_ylabel("cumulative incidence")
     ax.set_ylim(0, 1)

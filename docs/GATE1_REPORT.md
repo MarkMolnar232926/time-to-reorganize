@@ -32,14 +32,17 @@ Provisionally yes, but you need to eyeball the animations (`outputs/phase1/anim/
 | → regained the ball first (competing event) | 830 (41%) |
 | → censored (dead ball / shot / 20 s cap) | 424 (21%) |
 
-League cumulative incidence of reorganisation (95% match-bootstrap CI): **18% by 3 s, 30% by
-6 s, 40% by 10 s, 46% by 15 s**. Regain-first runs alongside it at 27 / 37 / 44 / 47%. The
+League cumulative incidence of reorganisation (95% match-bootstrap CI): **18% [16, 20] by 3 s,
+30% [28, 31] by 6 s, 39% [37, 41] by 10 s, 44% [42, 47] by 15 s**. Regain-first runs alongside
+it at 16 / 33 / 43 / 48%. The
 competing-risks framing is necessary: a naive mean T_r over reorganised episodes would ignore
 the 41% that regain first.
 
 **Recommendation: GO**, with the caveats below.
 
 ## What changed during Phase 1 (logged in DECISIONS.md)
+* **D-013 fix.** Regains were first timed at `window − hold`, which put 7% of them at t = 0. They
+  are now timed when the regain happens. This was caught while reviewing the CIF figure.
 * **D-011, continuous reference.** With the brief's discrete 3×3 contexts, D(t) jumped whenever
   the ball crossed a cell boundary. The reference is now interpolated in ball position.
 * **D-015 (needs your approval).** Analyse T_r only for losses where the team is disorganised
@@ -55,13 +58,13 @@ the 41% that regain first.
    but it weakens the "team-referenced" claim. A sensitivity run with the league reference only
    is a must for Phase 3.
 2. **Team-level differences in reorganisation speed are not yet shown to be reliable.**
-   Exploratory odd/even-match correlation of team P(reorganised by 6 s): 0.18 (12 teams; 0.49
+   Exploratory odd/even-match correlation of team P(reorganised by 6 s): 0.19 (12 teams; 0.49
    before D-011). With 12 teams that is noise either way. H1 needs an episode-level model
    (team random effect with an ICC), not a correlation of 12 points. The raw team spread is
    wide, though (P(reorg by 6 s) from 0.18 to 0.41).
 3. **Reliability matters.** In the "detected" regime, where D is undefined when < 50% of
-   defenders are detected, reorganisation by 6 s falls from 0.30 to 0.25, because missing
-   frames break holds. The "reliable episodes" regime barely changes it (0.31). The
+   defenders are detected, reorganisation by 6 s falls from 0.30 to 0.24, because missing
+   frames break holds. The "reliable episodes" regime leaves it unchanged (0.30). The
    back-line components are the most extrapolated.
 4. **Decomposition preview (descriptive only).** Among late episodes, goal-side count carries
    the largest share of D² (32% at +6 s). That share is sensitive to its spread floor (24% with

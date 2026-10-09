@@ -104,7 +104,8 @@ def time_to_reorganise(D: np.ndarray, tau: float, end: int, hold: int) -> tuple[
 
     Returns ``(t_frames, code)``: if reorganised, ``t`` is the start of the confirmed hold and
     code is REORGANISED. Otherwise ``t = max(end - hold, 0)`` (the last moment a hold could
-    have started and still been confirmed) and code is left for the caller (regain/censored).
+    have started and still been confirmed) and code is left for the caller; a regain (competing
+    event) is then re-timed at ``end`` by the caller.
     """
     below = np.isfinite(D) & (D <= tau)
     j = first_hold(below, hold, end)
@@ -198,6 +199,8 @@ def episodes_for_match(
         t_fr, code = time_to_reorganise(Dw, tau[A], end, hold)
         if code != REORGANISED:
             code = REGAIN if reason == "regain" else CENSORED
+        if code == REGAIN:
+            t_fr = end  # a competing event is timed when it happens (D-013)
         row = {
             "match_id": md.meta.match_id,
             "period": r.period,

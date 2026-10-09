@@ -84,7 +84,9 @@ comparable across component sets (τ ≈ 1.0–1.15 for all teams). *(adopted)*
 
 **D-013. T_r is the start of the first D ≤ τ stretch lasting `hold_s`, and the whole hold must
 finish inside the open-play window.** For episodes that never reorganise, the analysis time is
-`window − hold`, the last moment a confirmed hold could have started. Frames with missing D
+`window − hold`, the last moment a confirmed hold could have started. A regain (competing event)
+is timed at the regain itself. A first version used `window − hold` for regains too, which put
+7% of regains at t = 0; this was caught in the GATE 1 figure review and fixed. Frames with missing D
 break a hold. Tested on synthetic traces: recovery within ±0.2 s with noise, and exact
 without it. *(adopted)*
 
