@@ -40,4 +40,12 @@ outcomes:
   danger_window_s: 15.0                # dangerous attack conceded within this window after loss
 
 reliability:
-  min_detected_fraction: 0.6           # placeholder; to be set from audit distribution, before outcome analysis
+  # Regimes (5.6). Placeholders near the audit median; fixed in ANALYSIS_PLAN.md before outcome models.
+  frame_min_detected: 0.5              # "detected-only" regime: D undefined when < 50% of the 10 defenders are detected
+  episode_min_reliability: 0.6         # "reliable episodes" regime: mean detected fraction over first 10 s >= 0.6
+
+prototype:
+  match_id: 2007721                    # D-010: Auckland FC v CC Mariners
+  n_examples: 6                        # fastest / slowest / random episodes animated for face validity
+  seed: 20261009                       # fixed seed for random example choice and bootstrap
+  n_boot: 200                          # match-level bootstrap replicates for CIF bands

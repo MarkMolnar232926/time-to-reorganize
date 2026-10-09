@@ -18,5 +18,18 @@ date and reason, and analyses are labelled *confirmatory* or *exploratory*.
 - 13 teams with 1–7 games each. Newcastle has a single game, so it cannot enter split-half
   reliability by match.
 
+## Notes from Phase 1 (to be turned into fixed rules at the freeze)
+- Analysis population: losses with D0 > τ (D-015, pending approval). Report the "organised at
+  loss" share separately.
+- H1 must use an episode-level model (team random effect, ICC, match-cluster bootstrap): 12 teams
+  are too few for a correlation of team means.
+- H3: report component *ranking* with sensitivity to the spread floors and weights. Goal-side
+  share moves from 32% to 24% with its floor, while T_r ranks are robust (Spearman 0.91 without
+  goal-side).
+- Rebuild the reference inside each CV training fold for H2/H4.
+- Pre-registered sensitivity grid: τ quantile {0.70, 0.75, 0.80}, hold {1.5, 2, 3} s,
+  discrete vs continuous reference, league-only reference, goal-side floor {0.5, 1.0}.
+
 ## Changelog
 - 2026-10-09: draft created.
+- 2026-10-09: Phase 1 notes added (no outcome data used).

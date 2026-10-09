@@ -1,6 +1,6 @@
 # Status
 
-_Last updated: 9 Oct 2026. GATE 0 passed (D-004, D-006 approved). **Phase 1 in progress.**_
+_Last updated: 9 Oct 2026. GATE 0 passed (D-004, D-006 approved). Phase 1 prototype built; **GATE 1 evidence ready (`docs/GATE1_REPORT.md`), waiting for review.**_
 
 ## Done
 - Repo skeleton: `src/reorg/` package, `pyproject.toml` + `uv.lock`, `config.yaml`, tests, CI,
@@ -23,8 +23,21 @@ _Last updated: 9 Oct 2026. GATE 0 passed (D-004, D-006 approved). **Phase 1 in p
   framing is essential.
 - Central defenders are the least-detected outfield role. The reliability layer matters.
 
-## Next (Phase 1, after GATE 0 approval)
-See `docs/PHASE1_PLAN.md`.
+## Phase 1 (done ahead of schedule)
+- `normalise`, `shape`, `reference` (shrunk team × context, continuous in ball position),
+  `reorganisation` (D(t), τ, T_r with hysteresis, censoring/competing regain, debt,
+  decomposition), `reliability` (3 regimes), `survival` (KM, Aalen–Johansen, match bootstrap),
+  `viz` (snapshots, D curves, CIF, MP4 animations). 32 tests.
+- `scripts/phase1_prototype.py` → `docs/gate1_generated.md` + `outputs/phase1/` (18 face-validity
+  animations from 2007721). Whole league in ~2 min without animations.
+- Headline: 2,031 disorganised-at-loss episodes. Reorganised by 6 s: 30% [28, 32]. Regain first by
+  6 s: 37%. Caveats: team-specific references are weakly reproducible, and team-level reliability
+  of the metric is not yet shown (see report).
+
+## Next
+- GATE 1: you review the animations and the report, and decide D-015 (restrict T_r to D0 > τ).
+- Then Phase 2: freeze ANALYSIS_PLAN.md (by 5 Nov), episode-level H1 model, sensitivity grid,
+  package API.
 
 ## Blockers / questions for Mark
 1. **Spec PDFs**: SkillCorner's HubSpot links return 403 from this environment. Please download

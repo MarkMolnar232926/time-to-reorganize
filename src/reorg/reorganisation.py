@@ -57,9 +57,19 @@ class ReorgParams:
         )
 
 
-def z_scores(td: TeamData, ref: Reference) -> np.ndarray:
-    """Per-frame standardised deviations (n_frames, K) from the team's reference."""
-    C, Sg = ref.lookup(td.tf.team_id, td.cell)
+def z_scores(td: TeamData, ref: Reference, continuous: bool = True) -> np.ndarray:
+    """Per-frame standardised deviations (n_frames, K) from the team's reference.
+
+    ``continuous`` interpolates the reference in ball position (D-011); otherwise the
+    reference of the discrete context cell is used (sensitivity analysis).
+    """
+    tf = td.tf
+    if continuous:
+        C, Sg = ref.lookup_continuous(
+            tf.team_id, tf.ball_x, tf.ball_y, tf.pitch_length, tf.pitch_width
+        )
+    else:
+        C, Sg = ref.lookup(tf.team_id, td.cell)
     S = td.S[list(ref.components)].to_numpy(float)
     return (S - C) / Sg
 
@@ -245,3 +255,14 @@ def _ball_speed(td: TeamData, i0: int, p: ReorgParams) -> float:
     vx = savgol_filter(bx, p.savgol_window, p.savgol_order, deriv=1) * p.fps
     vy = savgol_filter(by, p.savgol_window, p.savgol_order, deriv=1) * p.fps
     return float(np.mean(np.hypot(vx, vy)))
+
+
+def team_taus(match_data: list, ref: Reference, params: ReorgParams) -> dict[int, float]:
+    """tau per team: ``tau_quantile`` of D over all of the team's organised frames."""
+    w = np.array([params.weights[k] for k in ref.components])
+    vals: dict[int, list] = {}
+    for md in match_data:
+        for tid, td in md.teams.items():
+            D = shape_distance(z_scores(td, ref), w)
+            vals.setdefault(tid, []).append(D[td.organised & np.isfinite(D)])
+    return {t: float(np.quantile(np.concatenate(v), params.tau_quantile)) for t, v in vals.items()}

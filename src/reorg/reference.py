@@ -36,6 +36,48 @@ class Reference:
     table: pd.DataFrame
     components: tuple[str, ...]
     n_cells: int
+    n_channels: int = 3
+    n_depths: int = 3
+
+    def _grids(self, team_id: int) -> tuple[np.ndarray, np.ndarray]:
+        """Centre and spread grids of shape (n_depths, n_channels, K)."""
+        K = len(self.components)
+        tid = team_id if team_id in self.table.index.get_level_values(0) else LEAGUE
+        sub = self.table.loc[tid].reindex(range(self.n_cells))
+        cen = sub[[f"c_{k}" for k in self.components]].to_numpy(float)
+        spr = sub[[f"s_{k}" for k in self.components]].to_numpy(float)
+        shape = (self.n_depths, self.n_channels, K)
+        return cen.reshape(shape), spr.reshape(shape)
+
+    def lookup_continuous(
+        self, team_id: int, ball_x: np.ndarray, ball_y: np.ndarray, L: float, W: float
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Centre and spread (n_frames, K), bilinearly interpolated in ball position between
+        the centres of the context cells (constant beyond the outermost cell centres).
+
+        Avoids discontinuities in the target when the ball crosses a cell boundary.
+        """
+        cen, spr = self._grids(team_id)
+        # Fractional cell coordinates: 0 at the centre of the first cell.
+        u = np.clip((ball_x + L / 2) / (L / self.n_depths) - 0.5, 0, self.n_depths - 1)
+        v = np.clip((ball_y + W / 2) / (W / self.n_channels) - 0.5, 0, self.n_channels - 1)
+        ok = np.isfinite(u) & np.isfinite(v)
+        u, v = np.where(ok, u, 0), np.where(ok, v, 0)
+        i0 = np.minimum(np.floor(u).astype(int), self.n_depths - 2)
+        j0 = np.minimum(np.floor(v).astype(int), self.n_channels - 2)
+        fu, fv = (u - i0)[:, None], (v - j0)[:, None]
+
+        def bil(g: np.ndarray) -> np.ndarray:
+            return (
+                (1 - fu) * (1 - fv) * g[i0, j0]
+                + fu * (1 - fv) * g[i0 + 1, j0]
+                + (1 - fu) * fv * g[i0, j0 + 1]
+                + fu * fv * g[i0 + 1, j0 + 1]
+            )
+
+        C, Sg = bil(cen), bil(spr)
+        C[~ok], Sg[~ok] = np.nan, np.nan
+        return C, Sg
 
     def lookup(self, team_id: int, cell: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Centre and spread arrays (n_frames, K) for a team's per-frame cells (-1 -> NaN)."""
@@ -116,7 +158,13 @@ def build_reference(
     tab = pd.DataFrame(rows)
     tab[sc] = np.maximum(tab[sc].to_numpy(float), floor)
     tab[["team_id", "cell"]] = tab[["team_id", "cell"]].astype(int)
-    return Reference(tab.set_index(["team_id", "cell"]).sort_index(), tuple(components), n_cells)
+    return Reference(
+        tab.set_index(["team_id", "cell"]).sort_index(),
+        tuple(components),
+        n_cells,
+        int(rc["n_channels"]),
+        int(rc["n_depths"]),
+    )
 
 
 def split_half_stability(

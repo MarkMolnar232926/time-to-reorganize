@@ -62,3 +62,43 @@ sandbox proxy CA. Docker Hub and Debian mirrors are blocked or rate-limited here
 Alternatives: 1953632 (highest detection), 1996435 (has pose).
 Best in-play tracking coverage, above-median detection, and the two best-covered teams
 (7 and 4 games). *(proposed)*
+
+---
+## Phase 1
+
+**D-011. The reference is interpolated continuously in ball position (bilinear between the 9
+context-cell centres, clamped at the outer centres).**
+Alternatives: the discrete cell reference from the brief (§5.4).
+Face-validity review of the first prototype runs showed D(t) jumping by 1–3 units when the ball
+crossed a channel boundary, because the target's lateral offset jumped by up to 14 m in 0.4 s.
+That is an artefact of the method, not of the defending. Cells are still used to *build* the
+reference and as covariates. The discrete version is kept as a sensitivity analysis
+(`z_scores(..., continuous=False)`). Disclosure: after the switch, the exploratory odd/even
+correlation of team P(reorganised by 6 s) fell from 0.49 to 0.18 (12 teams, both within noise).
+The change was made for face validity before that number was seen, and we keep it. *(adopted,
+review at GATE 1)*
+
+**D-012. D(t) is the weighted RMS of z (divided by Σw), not the root of the weighted sum.**
+This keeps D in "typical deviations per component" whatever the number of components, so τ is
+comparable across component sets (τ ≈ 1.0–1.15 for all teams). *(adopted)*
+
+**D-013. T_r is the start of the first D ≤ τ stretch lasting `hold_s`, and the whole hold must
+finish inside the open-play window.** For episodes that never reorganise, the analysis time is
+`window − hold`, the last moment a confirmed hold could have started. Frames with missing D
+break a hold. Tested on synthetic traces: recovery within ±0.2 s with noise, and exact
+without it. *(adopted)*
+
+**D-014. Window ends: regain by the losing team is a competing event. Opponent shot, dead ball,
+period end and the 20 s cap are censoring.** The shot is kept as a separate `end_reason`
+because it is outcome-related. Its treatment in the outcome models goes into ANALYSIS_PLAN.md.
+*(adopted for Phase 1)*
+
+**D-015. Proposed: survival analysis of T_r is restricted to losses where the team is
+disorganised at the moment of loss (D0 > τ, 72%).** The other 28% (D0 ≤ τ) have nothing to
+reorganise. They are reported as a separate team-level quantity: "share of losses suffered while
+organised". D0 rises with the length of the losing possession, as expected (median 1.29 for
+possessions < 1 s vs 1.78 for > 20 s), which supports D-006. *(proposed at GATE 1)*
+
+**D-016. Phase 1 reliability regimes use placeholders (frame: ≥ 50% of defenders detected;
+episode: mean ≥ 0.6 over the first 10 s).** They will be fixed in ANALYSIS_PLAN.md before any
+outcome model. *(provisional)*

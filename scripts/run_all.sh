@@ -8,4 +8,5 @@ PY="${PYTHON:-python}"
 scripts/download_data.sh
 "$PY" scripts/audit_data.py
 "$PY" -m reorg.cli losses --out outputs/losses.csv
+"$PY" scripts/phase1_prototype.py --no-anim
 "$PY" scripts/check_readme.py README.md
