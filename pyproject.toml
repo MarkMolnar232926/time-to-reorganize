@@ -1,6 +1,6 @@
 [project]
 name = "reorg"
-version = "0.0.1"
+version = "0.1.0"
 description = "Time to Reorganise: a team-referenced, time-resolved metric of defensive reorganisation after possession loss (SkillCorner tracking data)."
 readme = "README.md"
 license = { file = "LICENSE.md" }
@@ -13,6 +13,7 @@ dependencies = [
   "pyyaml>=6",
   "scipy>=1.11",
   "matplotlib>=3.8",
+  "statsmodels>=0.15.0",
 ]
 
 [project.optional-dependencies]
@@ -37,3 +38,4 @@ select = ["E", "F", "W", "I", "B", "UP", "NPY"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["tests"]

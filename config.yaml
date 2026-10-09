@@ -38,6 +38,8 @@ reorganisation:
 
 outcomes:
   danger_window_s: 15.0                # dangerous attack conceded within this window after loss
+  min_box_frames: 2                    # box entry must last >= 0.2 s (one-frame ball jitter at the box edge is not an entry)
+  landmarks_s: [3.0, 6.0]              # landmark times for H2/H4 (3 s primary, 6 s secondary), fixed before outcome analysis
 
 reliability:
   # Regimes (5.6). Placeholders near the audit median; fixed in ANALYSIS_PLAN.md before outcome models.

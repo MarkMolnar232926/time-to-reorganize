@@ -1,5 +1,8 @@
 # GATE 1 report: one-match prototype (go/no-go)
 
+**Outcome (9 Oct 2026): GO.** Mark reviewed the animations (slow_1 in detail: the peak at ~5 s and
+the return at ~10.7 s both look right) and approved D-011 and D-015.
+
 *Prepared 9 Oct 2026, ahead of the 29 Oct gate. Generated numbers are in
 [`gate1_generated.md`](gate1_generated.md). Rerun with `python scripts/phase1_prototype.py`
 (~2 min, or ~10 min with the 18 animations). No outcome (danger) variable has been touched.*

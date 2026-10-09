@@ -57,3 +57,20 @@ def test_continuous_lookup_matches_cells_and_is_continuous():
     assert np.allclose(e1, e2)
     nan, _ = ref.lookup_continuous(1, np.array([np.nan]), np.array([0.0]), L, W)
     assert np.isnan(nan).all()
+
+
+def test_league_only_reference_ignores_team():
+    org = synthetic_org()
+    ref = build_reference(org, CFG, team_specific=False)
+    assert set(ref.table.index.get_level_values(0)) == {LEAGUE}
+    a, _ = ref.lookup_continuous(1, np.array([0.0]), np.array([0.0]), L, W)
+    b, _ = ref.lookup_continuous(2, np.array([0.0]), np.array([0.0]), L, W)
+    assert np.allclose(a, b)
+
+
+def test_unvisited_cells_do_not_create_holes():
+    org = synthetic_org()
+    org = org[org["cell"].isin([3, 4, 5])]  # only the middle third was ever defended
+    ref = build_reference(org, CFG)
+    C, S = ref.lookup_continuous(1, np.linspace(-50, 50, 21), np.zeros(21), L, W)
+    assert np.isfinite(C).all() and np.isfinite(S).all()

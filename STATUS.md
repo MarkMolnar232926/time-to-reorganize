@@ -1,6 +1,6 @@
 # Status
 
-_Last updated: 9 Oct 2026. GATE 0 passed (D-004, D-006 approved). Phase 1 prototype built; **GATE 1 evidence ready (`docs/GATE1_REPORT.md`), waiting for review.**_
+_Last updated: 9 Oct 2026. GATE 1 passed. Phase 2: **analysis plan drafted, waiting at GATE 2.**_
 
 ## Done
 - Repo skeleton: `src/reorg/` package, `pyproject.toml` + `uv.lock`, `config.yaml`, tests, CI,
@@ -34,13 +34,21 @@ _Last updated: 9 Oct 2026. GATE 0 passed (D-004, D-006 approved). Phase 1 protot
   6 s: 33%. Caveats: team-specific references are weakly reproducible, and team-level reliability
   of the metric is not yet shown (see report).
 
-## Next
-- GATE 1: you review the animations and the report, and decide D-015 (restrict T_r to D0 > τ).
-- Then Phase 2: freeze ANALYSIS_PLAN.md (by 5 Nov), episode-level H1 model, sensitivity grid,
-  package API.
+## Phase 2 (in progress), GATE 2 = freeze ANALYSIS_PLAN.md
+- GATE 1 passed 9 Oct (GO, D-011 and D-015 approved). PR #1 merged, and the branch restarted
+  from main.
+- Done: D-015 flag + `team_summary` (share of losses while organised); league-only reference
+  option; pre-registered sensitivity grid (`scripts/sensitivity.py`, all T_r rank ρ ≥ 0.85);
+  `reorg.outcomes` (danger definition, landmark sample) and `reorg.stats` (H1 permutation and
+  split-half, H2 cluster-bootstrap OR, H4 leave-one-match-out comparison, H3 shares). All tested
+  on synthetic data only, and **not run on real data**. Public API `reorg.run_league` etc. +
+  `reorg episodes` CLI; end-to-end synthetic smoke test in CI. 48 tests.
+- **Waiting at GATE 2:** your review of `ANALYSIS_PLAN.md`.
+- After the freeze: the per-fold reference rebuild for H4, then running H1–H5.
 
 ## Blockers / questions for Mark
-1. **Spec PDFs**: SkillCorner's HubSpot links return 403 from this environment. Please download
+1. **Related-work papers + spec PDFs**: www.mdpi.com, arxiv.org and ncbi.nlm.nih.gov are blocked by
+   this environment's network policy (needed for the rβ baseline, H4c). Also: SkillCorner's HubSpot links return 403 from this environment. Please download
    the Dynamic Events and Phases of Play spec PDFs into `docs/specs/`. (Not blocking Phase 1.)
 2. **`opendata/` in git history**: removed from the tree. It is still in commit `ca6fd71`. Purge it
    with a history rewrite + force-push before going public? (Your call.)
