@@ -15,8 +15,8 @@ Competition rules forbid redistributing data in the submission repo. Pinning com
 `4340d27` makes the run reproducible. `scripts/download_data.py` uses only the standard library
 (no git, git-lfs or curl, so it also works on Windows and in a slim container). Small files come
 from raw.githubusercontent.com. Tracking files (Git LFS) come from media.githubusercontent.com
-and are verified against the SHA-256 in their LFS pointer. *(adopted; the existing `opendata/` folder
-in git history is an open question for Mark, see STATUS.md)*
+and are verified against the SHA-256 in their LFS pointer. *(adopted; `opendata/` removed from the tree on 9 Oct. It still exists in
+git history (commit `ca6fd71`). Purging it requires a history rewrite + force-push, which is Mark's call before the repo goes public)*
 
 **D-003. Thin custom parser instead of kloppy.**
 Alternatives: kloppy's SkillCorner loader.
@@ -32,7 +32,7 @@ p90 = 7 s. Events and phases agree at 78–83%. Events give frame-accurate first
 the losing action type. Phases are coarser, so they serve as the cross-check. Rule: consecutive
 team-possession runs with no game interruption between them, gaining team holds ≥ 1.0 s,
 contiguous phases (ball in play) from A's last touch through B's first control + 1 s.
-`t0` = B's first control. *(proposed, awaiting GATE 0)*
+`t0` = B's first control. *(approved at GATE 0, 9 Oct)*
 
 **D-005. Ball-in-play = inside a run of contiguous phases of play (gap ≤ 1 frame).**
 Alternatives: ball detected / ball x not null; event interruptions only.
@@ -43,7 +43,7 @@ boundary frame at a change of possession. *(adopted)*
 Alternatives: drop them (a team that never left its block has nothing to reorganise).
 32% of losses follow a possession under 2 s. Dropping them would select on shape. Instead we
 keep them and use `a_possession_s` as a stratifier / covariate, and decide at GATE 1 using
-D(t0) itself, which measures how disorganised the team actually is. *(proposed)*
+D(t0) itself, which measures how disorganised the team actually is. *(approved at GATE 0, 9 Oct)*
 
 **D-007. Losses that follow a shot or clearance are kept but flagged via `a_end_type`.**
 101 follow a shot and 109 a clearance. They are real transitions in a different context, so the

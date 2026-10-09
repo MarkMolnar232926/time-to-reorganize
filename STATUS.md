@@ -1,6 +1,6 @@
 # Status
 
-_Last updated: 9 Oct 2026, Phase 0 (setup + data audit). **Waiting at GATE 0.**_
+_Last updated: 9 Oct 2026. GATE 0 passed (D-004, D-006 approved). **Phase 1 in progress.**_
 
 ## Done
 - Repo skeleton: `src/reorg/` package, `pyproject.toml` + `uv.lock`, `config.yaml`, tests, CI,
@@ -29,8 +29,7 @@ See `docs/PHASE1_PLAN.md`.
 ## Blockers / questions for Mark
 1. **Spec PDFs**: SkillCorner's HubSpot links return 403 from this environment. Please download
    the Dynamic Events and Phases of Play spec PDFs into `docs/specs/`. (Not blocking Phase 1.)
-2. **`opendata/` folder committed in this repo** (commit `ca6fd71`): it includes SkillCorner
-   CSV/JSON data. The submission repo must not contain data. We need to delete it, and ideally
-   rewrite history before the repo is made public. Your call (rewriting history needs a force-push).
+2. **`opendata/` in git history**: removed from the tree. It is still in commit `ca6fd71`. Purge it
+   with a history rewrite + force-push before going public? (Your call.)
 3. **Rules needing a human decision before submission**: AI-assistance disclosure, and any
    employer/university permission for a competition entry. To resolve by GATE 4.
