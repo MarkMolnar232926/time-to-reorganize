@@ -177,6 +177,7 @@ def component_shares(
     out = pd.DataFrame({"component": components, "share": est, "lo": lo, "hi": hi})
     out = out.sort_values("share", ascending=False).reset_index(drop=True)
     g_lo, g_hi = np.percentile(gap, [2.5, 97.5])
+    out.attrs.update({"p_gap_le_0": float((1 + np.sum(np.asarray(gap) <= 0)) / (1 + len(gap)))})
     out.attrs.update(
         {
             "late_episodes": len(late),
@@ -186,3 +187,47 @@ def component_shares(
         }
     )
     return out
+
+
+# ------------------------------------------------------------------------- p-values for Holm
+def wald_one_sided_p(df: pd.DataFrame, y: str, X: list[str], term: str, cluster: str) -> float:
+    """One-sided (coefficient > 0) Wald p with cluster-robust (match) covariance."""
+    from scipy.stats import norm
+
+    exog = sm.add_constant(df[X].astype(float), has_constant="add")
+    res = sm.GLM(df[y].astype(float), exog, family=sm.families.Binomial()).fit(
+        cov_type="cluster", cov_kwds={"groups": pd.factorize(df[cluster])[0]}
+    )
+    return float(1 - norm.cdf(res.params[term] / res.bse[term]))
+
+
+def bootstrap_one_sided_p(
+    y: np.ndarray, p_a: np.ndarray, p_b: np.ndarray, clusters: np.ndarray, n_boot: int, seed: int
+) -> float:
+    """P(log-loss(a) - log-loss(b) >= 0) under the match-cluster bootstrap (+1 correction)."""
+    rng = np.random.default_rng(seed)
+    uniq = np.unique(clusters)
+    where = {c: np.flatnonzero(clusters == c) for c in uniq}
+    hits = 0
+    for _ in range(n_boot):
+        ii = np.concatenate([where[c] for c in rng.choice(uniq, len(uniq), replace=True)])
+        hits += log_loss(y[ii], p_a[ii]) - log_loss(y[ii], p_b[ii]) >= 0
+    return float((1 + hits) / (1 + n_boot))
+
+
+def holm(pvals: dict[str, float], alpha: float = 0.05) -> pd.DataFrame:
+    """Holm step-down adjusted p-values and decisions."""
+    items = sorted(pvals.items(), key=lambda kv: kv[1])
+    m = len(items)
+    adj, running = [], 0.0
+    for i, (_, p) in enumerate(items):
+        running = max(running, min(1.0, (m - i) * p))
+        adj.append(running)
+    return pd.DataFrame(
+        {
+            "test": [k for k, _ in items],
+            "p": [p for _, p in items],
+            "p_holm": adj,
+            "reject": [a <= alpha for a in adj],
+        }
+    )

@@ -89,3 +89,16 @@ def test_component_shares_identifies_dominant_component():
     out = stats.component_shares(df, ("a", "b", "c"), 6.0, n_boot=100, seed=0)
     assert out.iloc[0]["component"] == "a"
     assert out.attrs["gap_lo"] > 0
+
+
+def test_holm_matches_hand_computation():
+    out = stats.holm({"a": 0.01, "b": 0.04, "c": 0.03}).set_index("test")
+    assert out.loc["a", "p_holm"] == pytest.approx(0.03)
+    assert out.loc["c", "p_holm"] == pytest.approx(0.06)
+    assert out.loc["b", "p_holm"] == pytest.approx(0.06)  # monotone step-down
+    assert out.loc["a", "reject"] and not out.loc["b", "reject"]
+
+
+def test_wald_one_sided_p_small_for_true_positive_effect():
+    df = logit_data()
+    assert stats.wald_one_sided_p(df, "y", ["x", "z"], "x", "match_id") < 1e-6

@@ -51,3 +51,10 @@ prototype:
   n_examples: 6                        # fastest / slowest / random episodes animated for face validity
   seed: 20261009                       # fixed seed for random example choice and bootstrap
   n_boot: 200                          # match-level bootstrap replicates for CIF bands
+
+confirmatory:                          # ANALYSIS_PLAN.md (frozen 9 Oct 2026)
+  n_boot: 2000                         # match-cluster bootstrap resamples for every CI
+  n_perm: 5000                         # H1 permutations
+  min_events_full_model: 60            # H2 events-per-parameter rule (10 per term)
+  primary_horizon_s: 6.0               # H1 and H3 horizon
+  alpha: 0.05                          # family-wise, Holm

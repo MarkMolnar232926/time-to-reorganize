@@ -160,9 +160,13 @@ def episodes_for_match(
     runs = md.runs
     cache: dict[int, tuple[np.ndarray, np.ndarray, np.ndarray]] = {}
     rows, traces = [], {}
+    # A team absent from the reference data (e.g. its only game is held out) gets the median
+    # tau of the reference teams, as its reference already falls back to the league block.
+    tau_fallback = float(np.median(list(tau.values())))
     for r in md.losses.itertuples(index=False):
         A = int(r.losing_team_id)
         td = md.teams[A]
+        tau_A = tau.get(A, tau_fallback)
         if A not in cache:
             z = z_scores(td, ref, continuous)
             D = shape_distance(z, w)
@@ -201,7 +205,7 @@ def episodes_for_match(
         if min_frame_det is not None:
             Dw[detw < min_frame_det] = np.nan
         Dw[end + 1 :] = np.nan
-        t_fr, code = time_to_reorganise(Dw, tau[A], end, hold)
+        t_fr, code = time_to_reorganise(Dw, tau_A, end, hold)
         if code != REORGANISED:
             code = REGAIN if reason == "regain" else CENSORED
         if code == REGAIN:
@@ -220,16 +224,16 @@ def episodes_for_match(
             "reorganised": code == REORGANISED,
             "time_s": t_fr / fps,
             "T_r": t_fr / fps if code == REORGANISED else np.nan,
-            "tau": tau[A],
+            "tau": tau_A,
             "D0": Dw[0],
             # D-015: the T_r analysis population (team out of shape at the moment of loss).
-            "disorganised_at_loss": bool(np.isfinite(Dw[0]) and Dw[0] > tau[A]),
+            "disorganised_at_loss": bool(np.isfinite(Dw[0]) and Dw[0] > tau_A),
             "frac_D_missing": float(np.isnan(Dw[: end + 1]).mean()),
         }
         nwin = min(end, int(params.debt_window_s * fps))
         seg = Dw[: nwin + 1]
         row["debt"] = float(np.nansum(seg)) / fps
-        row["debt_above_tau"] = float(np.nansum(np.clip(seg - tau[A], 0, None))) / fps
+        row["debt_above_tau"] = float(np.nansum(np.clip(seg - tau_A, 0, None))) / fps
         row["debt_window_s"] = nwin / fps
         for h in params.horizons_s:
             k = int(round(h * fps))
@@ -262,7 +266,7 @@ def episodes_for_match(
         rows.append(row)
         if keep_traces:
             eid = f"{md.meta.match_id}_{int(r.frame_loss)}"
-            traces[eid] = EpisodeTrace(eid, Dw, z[i0 : i0 + H + 1], detw, end, tau[A])
+            traces[eid] = EpisodeTrace(eid, Dw, z[i0 : i0 + H + 1], detw, end, tau_A)
     return pd.DataFrame(rows), traces
 
 
