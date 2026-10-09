@@ -12,15 +12,29 @@ losses:
   max_null_gap_s: 1.0                  # tracking-field detector only: bridge null gaps <= 1 s (has no effect in practice, see audit)
   require_ball_in_play: true           # losses only while phases of play are contiguous (phases exist only in play)
 
+shape:
+  # Components entering D(t) and their weights (equal weights a priori; sensitivity later).
+  weights: {line_height: 1.0, depth: 1.0, width: 1.0, cx_ball: 1.0, cy_ball: 1.0, nn_median: 1.0, goal_side: 1.0}
+
 reference:
-  settled_after_loss_s: 15.0           # organised-defence frames must be >= 15 s after any loss (brief)
+  settled_after_loss_s: 15.0           # organised-defence frames must be >= 15 s after the team's last loss (brief)
   organised_phases: [low_block, medium_block, high_block]   # phases-of-play out-of-possession labels for a settled block
+  n_channels: 3                        # ball lateral channels (equal thirds of pitch width)
+  n_depths: 3                          # ball depth thirds (own / middle / attacking third of the defending team)
+  shrinkage_k_frames: 600              # prior strength toward league cell = 60 s of organised play (frames are autocorrelated)
+  # Spread floors (component units) so near-constant cells cannot produce huge z-scores.
+  spread_floor: {line_height: 1.0, depth: 1.0, width: 1.0, cx_ball: 1.0, cy_ball: 1.0, nn_median: 0.5, goal_side: 0.5}
+  split_half_min_frames: 300           # a team-cell enters the split-half check only with >= 30 s per half
 
 reorganisation:
   horizon_s: 20.0                      # administrative censoring cap (brief)
   hold_s: 2.0                          # D(t) <= tau must hold this long to count as reorganised (hysteresis)
   tau_quantile: 0.75                   # tau = this quantile of D over the team's own organised frames
   debt_window_s: 15.0                  # reorganisation debt integration window
+  decomposition_horizons_s: [3.0, 6.0, 10.0]   # fixed horizons for component contributions (brief)
+  ball_speed_window_s: 3.0             # opponent ball speed measured over the first 3 s (brief)
+  savgol_window_frames: 7              # Savitzky-Golay window for ball velocity (0.7 s at 10 fps)
+  savgol_polyorder: 2
 
 outcomes:
   danger_window_s: 15.0                # dangerous attack conceded within this window after loss
