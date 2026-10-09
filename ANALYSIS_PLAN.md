@@ -133,3 +133,5 @@ logged below and in `DECISIONS.md`, and results affected by a deviation are labe
 - 2026-10-09: full draft for GATE 2 (landmark design, outcome definition, H1–H5 tests, CV
   protocol, sensitivity grid). Still no outcome data used.
 - 2026-10-09: **FROZEN** (GATE 2 approved). Baseline c (rβ) dropped under the rule above.
+- 2026-10-09: confirmatory run completed (`scripts/confirmatory.py`, commit `63d71cc`, written
+  before the run). Results are in `docs/confirmatory_generated.md`. No deviations from the plan.

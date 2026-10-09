@@ -1,6 +1,16 @@
 # Status
 
-_Last updated: 9 Oct 2026. GATE 2 passed: **ANALYSIS_PLAN.md frozen**. Running the confirmatory analyses._
+_Last updated: 9 Oct 2026. GATE 2 passed (plan frozen). **Confirmatory results are in (`docs/confirmatory_generated.md`), waiting for Mark's direction on framing.**_
+
+## Confirmatory results (9 Oct, Holm-corrected)
+- H3 confirmed: goal-side count carries the most remaining disorganisation (32% of D² at +6 s,
+  robust to the floor).
+- H2 not confirmed at the primary 3 s landmark (OR 1.34 [0.95, 2.02]). Secondary analyses (log D at
+  3 s, and both exposures at 6 s) show clear positive associations.
+- H1 not confirmed: team differences are not distinguishable from chance with 20 games
+  (permutation p = 0.23, Spearman-Brown 0.32).
+- H4 not confirmed: no out-of-fold predictive gain over the covariates (ΔAUC +0.001).
+  SkillCorner's phase label predicts better than D.
 
 ## Done
 - Repo skeleton: `src/reorg/` package, `pyproject.toml` + `uv.lock`, `config.yaml`, tests, CI,
