@@ -1,0 +1,29 @@
+# All thresholds live here. Each has a one-line rationale; changes are logged in DECISIONS.md.
+
+data:
+  root: data/skillcorner/data          # output of scripts/download_data.sh
+  cache: data/cache                    # parquet cache of parsed tracking (gitignored)
+  fps: 10                              # SkillCorner tracking frame rate (from README, verified in audit)
+
+losses:
+  # Primary source (proposed, awaiting GATE 0): dynamic-events player_possession runs (D-004).
+  source: events                       # events | tracking (tracking possession field kept as cross-check only)
+  min_sustain_s: 1.0                   # debounce: B must hold possession >= 1 s so deflections/flicks are not losses
+  max_null_gap_s: 1.0                  # tracking-field detector only: bridge null gaps <= 1 s (has no effect in practice, see audit)
+  require_ball_in_play: true           # losses only while phases of play are contiguous (phases exist only in play)
+
+reference:
+  settled_after_loss_s: 15.0           # organised-defence frames must be >= 15 s after any loss (brief)
+  organised_phases: [low_block, medium_block, high_block]   # phases-of-play out-of-possession labels for a settled block
+
+reorganisation:
+  horizon_s: 20.0                      # administrative censoring cap (brief)
+  hold_s: 2.0                          # D(t) <= tau must hold this long to count as reorganised (hysteresis)
+  tau_quantile: 0.75                   # tau = this quantile of D over the team's own organised frames
+  debt_window_s: 15.0                  # reorganisation debt integration window
+
+outcomes:
+  danger_window_s: 15.0                # dangerous attack conceded within this window after loss
+
+reliability:
+  min_detected_fraction: 0.6           # placeholder; to be set from audit distribution, before outcome analysis

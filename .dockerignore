@@ -1,0 +1,8 @@
+data/
+outputs/
+.venv/
+.git/
+opendata/
+**/__pycache__/
+.pytest_cache/
+.ruff_cache/
