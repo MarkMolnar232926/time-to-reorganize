@@ -108,6 +108,10 @@ def plot_team_card(p: dict, path=None, mark_s: float = 6.0):
     at = float(np.interp(mark_s, ct["t"], ct["cif_1"]))
     at_lo = float(np.interp(mark_s, ct["t"], ct["lo"]))
     at_hi = float(np.interp(mark_s, ct["t"], ct["hi"]))
+    # A match-level bootstrap needs at least two matches; with one, no interval is shown.
+    has_ci = p["matches"] >= 2
+    ci_txt = f" [{at_lo:.0%}, {at_hi:.0%}]" if has_ci else " (1 game: no interval)"
+    games = "game" if p["matches"] == 1 else "games"
     al = float(np.interp(mark_s, cl["t"], cl["cif_1"]))
     fig.suptitle(
         f"{p['team']}: what happens after losing the ball",
@@ -120,10 +124,10 @@ def plot_team_card(p: dict, path=None, mark_s: float = 6.0):
     fig.text(
         0.06,
         0.895,
-        f"{p['losses']} losses in {p['matches']} games. Already organised at the moment of "
+        f"{p['losses']} losses in {p['matches']} {games}. Already organised at the moment of "
         f"loss: {p['share_organised_at_loss']:.0%} "
         f"(league {p['league_share_organised_at_loss']:.0%}). "
-        f"Back in shape within {mark_s:g} s: {at:.0%} [{at_lo:.0%}, {at_hi:.0%}] "
+        f"Back in shape within {mark_s:g} s: {at:.0%}{ci_txt} "
         f"(league {al:.0%}).",
         fontsize=10,
         color=viz.INK_2,
@@ -141,7 +145,8 @@ def plot_team_card(p: dict, path=None, mark_s: float = 6.0):
     ax = fig.add_subplot(gs[0])
     ax.fill_between(cl["t"], cl["lo"], cl["hi"], step="post", color=viz.REF, alpha=0.18, lw=0)
     ax.step(cl["t"], cl["cif_1"], where="post", color=viz.REF, lw=2, label="league")
-    ax.fill_between(ct["t"], ct["lo"], ct["hi"], step="post", color=viz.DEF, alpha=0.15, lw=0)
+    if has_ci:
+        ax.fill_between(ct["t"], ct["lo"], ct["hi"], step="post", color=viz.DEF, alpha=0.15, lw=0)
     ax.step(ct["t"], ct["cif_1"], where="post", color=viz.DEF, lw=2, label=p["team"])
     ax.axvline(mark_s, color=viz.GRID, lw=1, zorder=0)
     ax.set_xlabel("seconds after losing the ball")
@@ -159,25 +164,27 @@ def plot_team_card(p: dict, path=None, mark_s: float = 6.0):
     lo, hi = p["shares_team_ci"]
     order = sl.sort_values().index
     y = np.arange(len(order))
-    ax.hlines(
-        y,
-        lo[order],
-        hi[order],
-        color=viz.DEF,
-        lw=2,
-        alpha=0.35,
-        zorder=1,
-        label=f"{p['team']} 95% band",
-    )
+    if has_ci:
+        ax.hlines(
+            y,
+            lo[order],
+            hi[order],
+            color=viz.DEF,
+            lw=2,
+            alpha=0.35,
+            zorder=1,
+            label=f"{p['team']} 95% band",
+        )
     ax.scatter(sl[order], y, s=60, color=viz.REF, zorder=2, label="league")
     ax.scatter(st[order], y, s=60, color=viz.DEF, ec=viz.SURFACE, lw=1, zorder=3, label=p["team"])
-    for i, c in enumerate(order):
+    for i, c in enumerate(order):  # label sits on the team's own dot, never on the league's
         ax.text(
-            max(hi[c], sl[c]) + 0.01, i, f"{st[c]:.0%}", va="center", fontsize=9, color=viz.INK_2
+            st[c], i + 0.2, f"{st[c]:.0%}", ha="center", va="bottom", fontsize=8.5, color=viz.INK_2
         )
     ax.set_yticks(y, [LABELS[c] for c in order])
     ax.set_xlabel(f"share of the remaining disorganisation at +{p['horizon_s']:g} s")
-    ax.set_xlim(0, max(hi.max(), sl.max()) + 0.08)
+    ax.set_xlim(0, max(hi.max(), sl.max(), st.max()) + 0.06)
+    ax.set_ylim(-0.6, len(order) - 0.3)
     ax.xaxis.set_major_formatter(PercentFormatter(1.0, decimals=0))
     ax.grid(axis="x", color=viz.GRID, lw=0.6)
     ax.legend(frameon=False, loc="lower right", labelcolor=viz.INK)
