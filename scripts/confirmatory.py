@@ -270,11 +270,12 @@ def main() -> None:
         "",
         md_table(hm, 4),
         "",
-        f"Runtime: {time.time() - t0:.0f} s.",
         "",
     ]
     (ROOT / "docs" / "confirmatory_generated.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
+    # Runtime goes to the console only, so the generated report is byte-for-byte reproducible.
+    print(f"Runtime: {time.time() - t0:.0f} s.")
 
 
 if __name__ == "__main__":

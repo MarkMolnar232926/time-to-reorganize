@@ -10,7 +10,11 @@ _Last updated: 9 Oct 2026. GATE 2 passed (plan frozen). Confirmatory results in.
 - Coach-facing team cards (`reorg team-cards`) and episode viewer (`reorg episode`) done. Cards
   are descriptive, carry the H1 caveat, and show no interval for single-game teams.
 - Figure 1 (`docs/figure1.png`) and Table 1 (`docs/table1.md`) drafted (`scripts/make_figures.py`).
-- Next: clean Docker run of `run_all.sh`, then the README (Phase 4).
+- **Clean Docker reproduction passed (10 Oct):** fresh container, fresh data download, 55 tests,
+  and every generated document identical to the committed one. Full pipeline: 47 min, about 40 min
+  after parallelising the scenario sensitivity (target in the brief: ~30 min; the confirmatory
+  stage with 20 leave-one-match-out reference rebuilds is the main cost).
+- Next: Phase 4 (README ≤ 1000 words, video script), after GATE 3.
 
 ## Confirmatory results (9 Oct, Holm-corrected)
 - H3 confirmed: goal-side count carries the most remaining disorganisation (32% of D² at +6 s,

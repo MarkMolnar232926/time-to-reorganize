@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import multiprocessing as mp
 from pathlib import Path
 
 import numpy as np
@@ -51,9 +52,26 @@ def variants(cfg: dict) -> list[tuple[str, dict, dict]]:
     return out
 
 
+_STATE: dict = {}  # filled before forking; read by worker processes
+
+
+def _variant_episodes(item: tuple) -> pd.DataFrame:
+    _, c, opts = item
+    mds, org = _STATE["mds"], _STATE["org"]
+    cont = opts.get("continuous", True)
+    ref = build_reference(org, c, team_specific=opts.get("team_specific", True))
+    P = ReorgParams.from_config(c)
+    taus = team_taus(mds, ref, P, continuous=cont)
+    return pd.concat(
+        [episodes_for_match(md, ref, taus, P, continuous=cont)[0] for md in mds],
+        ignore_index=True,
+    )
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default=str(ROOT / "config.yaml"))
+    ap.add_argument("--workers", type=int, default=4, help="variants in parallel")
     a = ap.parse_args()
     cfg = yaml.safe_load(Path(a.config).read_text())
     root, cache = str(ROOT / cfg["data"]["root"]), str(ROOT / cfg["data"]["cache"])
@@ -63,15 +81,14 @@ def main() -> None:
     org = organised_frames(mds)
 
     rows, base_eps, base_team = [], None, None
-    for name, c, opts in variants(cfg):
-        cont = opts.get("continuous", True)
-        ref = build_reference(org, c, team_specific=opts.get("team_specific", True))
-        P = ReorgParams.from_config(c)
-        taus = team_taus(mds, ref, P, continuous=cont)
-        eps = pd.concat(
-            [episodes_for_match(md, ref, taus, P, continuous=cont)[0] for md in mds],
-            ignore_index=True,
-        )
+    _STATE.update(mds=mds, org=org)
+    vs = variants(cfg)
+    if a.workers > 1 and "fork" in mp.get_all_start_methods():
+        with mp.get_context("fork").Pool(a.workers) as pool:
+            all_eps = pool.map(_variant_episodes, vs)  # order preserved, deterministic
+    else:
+        all_eps = [_variant_episodes(v) for v in vs]
+    for (name, _, _), eps in zip(vs, all_eps, strict=True):
         dis = eps[eps["disorganised_at_loss"]]
         cif = cumulative_incidence(dis["time_s"], dis["code"], np.array(HORIZONS_S))
         team = team_summary(eps).set_index("losing_team_id")
