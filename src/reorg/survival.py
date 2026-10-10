@@ -25,19 +25,23 @@ def cumulative_incidence(
     time = np.asarray(time, float)
     code = np.asarray(code, int)
     ut = np.unique(time[code > 0])
-    S = 1.0
-    cif = {c: 0.0 for c in causes}
-    vals = {c: [] for c in causes}
-    svals = []
-    for t in ut:
-        n = np.sum(time >= t)
-        at = time == t
-        d_all = np.sum(at & (code > 0))
-        for c in causes:
-            cif[c] += S * np.sum(at & (code == c)) / n
-            vals[c].append(cif[c])
-        S *= 1 - d_all / n
-        svals.append(S)
+    if ut.size == 0:  # no event of any cause: nothing has happened yet at any time
+        out = {"t": grid, **{f"cif_{c}": np.zeros(len(grid)) for c in causes}}
+        return pd.DataFrame({**out, "surv": np.ones(len(grid))})
+    # Vectorised, with the same arithmetic in the same order as the textbook loop
+    # (S_prev * d_c / n accumulated sequentially; S = prod(1 - d / n)), so results are identical.
+    n = (len(time) - np.searchsorted(np.sort(time), ut, side="left")).astype(float)
+    idx = np.searchsorted(ut, time)
+    ev = code > 0
+    d_all = np.bincount(idx[ev], minlength=len(ut)).astype(float)
+    S_after = np.cumprod(1 - d_all / n)
+    S_before = np.concatenate([[1.0], S_after[:-1]])
+    vals = {}
+    for c in causes:
+        m = code == c
+        d_c = np.bincount(idx[m], minlength=len(ut)).astype(float)
+        vals[c] = np.cumsum(S_before * d_c / n)
+    svals = S_after
     out = {"t": grid}
     for c in causes:
         out[f"cif_{c}"] = _step_eval(ut, np.asarray(vals[c]), grid, 0.0)

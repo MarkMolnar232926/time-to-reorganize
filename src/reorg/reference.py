@@ -43,9 +43,14 @@ class Reference:
         """Centre and spread grids of shape (n_depths, n_channels, K)."""
         K = len(self.components)
         tid = team_id if team_id in self.table.index.get_level_values(0) else LEAGUE
-        sub = self.table.loc[tid].reindex(range(self.n_cells))
-        cen = sub[[f"c_{k}" for k in self.components]].to_numpy(float)
-        spr = sub[[f"s_{k}" for k in self.components]].to_numpy(float)
+        cols = [f"c_{k}" for k in self.components] + [f"s_{k}" for k in self.components]
+        sub = self.table.loc[tid].reindex(range(self.n_cells))[cols]
+        # Cells nobody defended in (possible with few or unusual matches): use the league
+        # cell, else the league median over cells, so interpolation never meets a hole.
+        league = self.table.loc[LEAGUE].reindex(range(self.n_cells))[cols]
+        sub = sub.fillna(league).fillna(league.median())
+        cen = sub[cols[:K]].to_numpy(float)
+        spr = sub[cols[K:]].to_numpy(float)
         shape = (self.n_depths, self.n_channels, K)
         return cen.reshape(shape), spr.reshape(shape)
 
@@ -111,9 +116,16 @@ def organised_frames(match_data: list, components: tuple[str, ...] = COMPONENTS)
 
 
 def build_reference(
-    org: pd.DataFrame, cfg: dict, components: tuple[str, ...] = COMPONENTS
+    org: pd.DataFrame,
+    cfg: dict,
+    components: tuple[str, ...] = COMPONENTS,
+    team_specific: bool = True,
 ) -> Reference:
-    """Build the shrunk team x cell reference from stacked organised frames."""
+    """Build the shrunk team x cell reference from stacked organised frames.
+
+    ``team_specific=False`` keeps only the league-pooled rows, so every team is compared with
+    the league block (sensitivity analysis for the "team-referenced" claim).
+    """
     rc = cfg["reference"]
     n_cells = int(rc["n_channels"] * rc["n_depths"])
     k = float(rc["shrinkage_k_frames"])
@@ -156,6 +168,8 @@ def build_reference(
             }
         )
     tab = pd.DataFrame(rows)
+    if not team_specific:
+        tab = tab[tab["team_id"] == LEAGUE]
     tab[sc] = np.maximum(tab[sc].to_numpy(float), floor)
     tab[["team_id", "cell"]] = tab[["team_id", "cell"]].astype(int)
     return Reference(

@@ -75,8 +75,8 @@ That is an artefact of the method, not of the defending. Cells are still used to
 reference and as covariates. The discrete version is kept as a sensitivity analysis
 (`z_scores(..., continuous=False)`). Disclosure: after the switch, the exploratory odd/even
 correlation of team P(reorganised by 6 s) fell from 0.49 to 0.18 (12 teams, both within noise).
-The change was made for face validity before that number was seen, and we keep it. *(adopted,
-review at GATE 1)*
+The change was made for face validity before that number was seen, and we keep it. *(approved
+at GATE 1, 9 Oct)*
 
 **D-012. D(t) is the weighted RMS of z (divided by Σw), not the root of the weighted sum.**
 This keeps D in "typical deviations per component" whatever the number of components, so τ is
@@ -99,8 +99,56 @@ because it is outcome-related. Its treatment in the outcome models goes into ANA
 disorganised at the moment of loss (D0 > τ, 72%).** The other 28% (D0 ≤ τ) have nothing to
 reorganise. They are reported as a separate team-level quantity: "share of losses suffered while
 organised". D0 rises with the length of the losing possession, as expected (median 1.29 for
-possessions < 1 s vs 1.78 for > 20 s), which supports D-006. *(proposed at GATE 1)*
+possessions < 1 s vs 1.78 for > 20 s), which supports D-006. *(approved at GATE 1, 9 Oct)*
 
 **D-016. Phase 1 reliability regimes use placeholders (frame: ≥ 50% of defenders detected;
 episode: mean ≥ 0.6 over the first 10 s).** They will be fixed in ANALYSIS_PLAN.md before any
 outcome model. *(provisional)*
+
+---
+## Phase 2
+
+**D-017. Outcome analyses use a landmark design (primary landmark 3 s, secondary 6 s).**
+Alternatives: regress danger on T_r directly (the brief's H2 wording); time-varying Cox model.
+Danger shortens or ends the observation of reorganisation, so T_r as a predictor of danger is
+biased (immortal time / reverse causation). Landmarking measures exposure before the outcome
+window. The time-varying Cox model is kept as exploratory. *(approved at GATE 2, 9 Oct)*
+
+**D-018. "Dangerous attack" = opponent shot or box entry (≥ 0.2 s inside the penalty area,
+entering from outside) within 15 s, while the opponent still has the ball in open play.**
+Alternatives: shots only (too rare for 20 games, so expected to be underpowered, though not
+checked); EPV/xThreat from the event file (a model-based outcome adds another model's error and is
+less transparent to coaches). *(approved at GATE 2, 9 Oct)*
+
+**D-019. Added `statsmodels` (GLM, cluster-robust covariance) as a dependency.** A standard,
+CPU-only, widely used package. It avoids hand-written estimators for the confirmatory models.
+*(adopted)*
+
+**D-020. CI runs the whole public API end to end on a synthetic match** (`tests/synthetic_match.py`)
+with a known convergence time (5 s), as the brief's "clean-env smoke run on synthetic data". It
+exposed and fixed one real robustness bug: context cells that no team ever defended in left holes
+in the interpolated reference. Those cells now fall back to the league cell or league median.
+*(adopted)*
+
+**D-021. Recorded property of τ = 75th percentile of calm-defending D.** A team that has arrived
+in its block can still read D > τ while it is in one of its looser calm moments, so T_r includes
+waiting for a "tight enough" moment. This is visible in the synthetic test, where the true arrival
+is 5 s and some episodes read about 10 s. It is intended (τ is defined from the team's own calm
+defending), but it is why the τ quantile is in the sensitivity grid. *(noted)*
+
+---
+## Phase 3
+
+**D-023. Headline story after the confirmatory results: "what goes wrong after losing the ball".**
+The confirmed finding is H3: getting players back behind the ball is the dominant remaining
+problem. H2 (3 s landmark) is reported as a probable but unproven effect (OR 1.34 [0.95, 2.02]),
+team rankings as "not reliable yet with 20 games" (H1), and H4 as "no predictive gain over simple
+context; SkillCorner's phase label predicts better". The analysis plan is unchanged. Only the
+framing of the write-up follows the results. *(approved by Mark, 10 Oct)*
+
+**D-024. The 6 s landmark result (OR 2.55 [1.96, 3.42]) is presented only as a pre-specified
+secondary result,** with the caveat that part of the association may run in reverse (an attack
+that is already succeeding keeps the defence stretched). *(approved by Mark, 10 Oct)*
+
+**D-025. Phase 3 focus: coach-facing tool** (per-team "what goes wrong" profiles, episode viewer
+and animations) ahead of deeper exploratory modelling. *(approved by Mark, 10 Oct)*

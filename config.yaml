@@ -38,6 +38,8 @@ reorganisation:
 
 outcomes:
   danger_window_s: 15.0                # dangerous attack conceded within this window after loss
+  min_box_frames: 2                    # box entry must last >= 0.2 s (one-frame ball jitter at the box edge is not an entry)
+  landmarks_s: [3.0, 6.0]              # landmark times for H2/H4 (3 s primary, 6 s secondary), fixed before outcome analysis
 
 reliability:
   # Regimes (5.6). Placeholders near the audit median; fixed in ANALYSIS_PLAN.md before outcome models.
@@ -49,3 +51,10 @@ prototype:
   n_examples: 6                        # fastest / slowest / random episodes animated for face validity
   seed: 20261009                       # fixed seed for random example choice and bootstrap
   n_boot: 200                          # match-level bootstrap replicates for CIF bands
+
+confirmatory:                          # ANALYSIS_PLAN.md (frozen 9 Oct 2026)
+  n_boot: 2000                         # match-cluster bootstrap resamples for every CI
+  n_perm: 5000                         # H1 permutations
+  min_events_full_model: 60            # H2 events-per-parameter rule (10 per term)
+  primary_horizon_s: 6.0               # H1 and H3 horizon
+  alpha: 0.05                          # family-wise, Holm

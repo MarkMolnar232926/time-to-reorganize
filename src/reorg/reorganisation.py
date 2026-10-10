@@ -39,6 +39,8 @@ class ReorgParams:
     savgol_window: int
     savgol_order: int
     weights: dict[str, float]
+    landmarks_s: tuple[float, ...] = (3.0, 6.0)
+    organised_phases: tuple[str, ...] = ("low_block", "medium_block", "high_block")
 
     @classmethod
     def from_config(cls, cfg: dict) -> ReorgParams:
@@ -54,6 +56,8 @@ class ReorgParams:
             savgol_window=int(rc["savgol_window_frames"]),
             savgol_order=int(rc["savgol_polyorder"]),
             weights={k: float(v) for k, v in cfg["shape"]["weights"].items()},
+            landmarks_s=tuple(float(x) for x in cfg["outcomes"]["landmarks_s"]),
+            organised_phases=tuple(cfg["reference"]["organised_phases"]),
         )
 
 
@@ -131,6 +135,7 @@ def episodes_for_match(
     params: ReorgParams,
     min_frame_det: float | None = None,
     keep_traces: bool = False,
+    continuous: bool = True,
 ) -> tuple[pd.DataFrame, dict[str, EpisodeTrace]]:
     """Summarise every primary loss in a match.
 
@@ -155,11 +160,15 @@ def episodes_for_match(
     runs = md.runs
     cache: dict[int, tuple[np.ndarray, np.ndarray, np.ndarray]] = {}
     rows, traces = [], {}
+    # A team absent from the reference data (e.g. its only game is held out) gets the median
+    # tau of the reference teams, as its reference already falls back to the league block.
+    tau_fallback = float(np.median(list(tau.values())))
     for r in md.losses.itertuples(index=False):
         A = int(r.losing_team_id)
         td = md.teams[A]
+        tau_A = tau.get(A, tau_fallback)
         if A not in cache:
-            z = z_scores(td, ref)
+            z = z_scores(td, ref, continuous)
             D = shape_distance(z, w)
             det = td.tf.det.mean(axis=1)
             cache[A] = (z, D, det)
@@ -196,7 +205,7 @@ def episodes_for_match(
         if min_frame_det is not None:
             Dw[detw < min_frame_det] = np.nan
         Dw[end + 1 :] = np.nan
-        t_fr, code = time_to_reorganise(Dw, tau[A], end, hold)
+        t_fr, code = time_to_reorganise(Dw, tau_A, end, hold)
         if code != REORGANISED:
             code = REGAIN if reason == "regain" else CENSORED
         if code == REGAIN:
@@ -215,14 +224,16 @@ def episodes_for_match(
             "reorganised": code == REORGANISED,
             "time_s": t_fr / fps,
             "T_r": t_fr / fps if code == REORGANISED else np.nan,
-            "tau": tau[A],
+            "tau": tau_A,
             "D0": Dw[0],
+            # D-015: the T_r analysis population (team out of shape at the moment of loss).
+            "disorganised_at_loss": bool(np.isfinite(Dw[0]) and Dw[0] > tau_A),
             "frac_D_missing": float(np.isnan(Dw[: end + 1]).mean()),
         }
         nwin = min(end, int(params.debt_window_s * fps))
         seg = Dw[: nwin + 1]
         row["debt"] = float(np.nansum(seg)) / fps
-        row["debt_above_tau"] = float(np.nansum(np.clip(seg - tau[A], 0, None))) / fps
+        row["debt_above_tau"] = float(np.nansum(np.clip(seg - tau_A, 0, None))) / fps
         row["debt_window_s"] = nwin / fps
         for h in params.horizons_s:
             k = int(round(h * fps))
@@ -241,10 +252,21 @@ def episodes_for_match(
         row["cell"] = int(td.cell[i0])
         row["goal_side_at_loss"] = td.S["goal_side"].iloc[i0]
         row["ball_speed_3s"] = _ball_speed(td, i0, params)
+        # Baseline exposures for H4 (no outcome information).
+        org_label = np.isin(md.phase_oop_type[i0 : i0 + end + 1], list(params.organised_phases))
+        hit = np.flatnonzero(org_label)
+        row["phase_T_org"] = hit[0] / fps if hit.size else np.nan  # event-based duration
+        row["phase_T_org_observed"] = bool(hit.size)
+        nn = td.S["nn_median"].to_numpy()
+        for lm in params.landmarks_s:
+            k = int(round(lm * fps))
+            ok = k <= end
+            row[f"nn_mean_0_{lm:g}s"] = float(np.nanmean(nn[i0 : i0 + k + 1])) if ok else np.nan
+            row[f"phase_organised_at_{lm:g}s"] = bool(ok and org_label[: k + 1].any())
         rows.append(row)
         if keep_traces:
             eid = f"{md.meta.match_id}_{int(r.frame_loss)}"
-            traces[eid] = EpisodeTrace(eid, Dw, z[i0 : i0 + H + 1], detw, end, tau[A])
+            traces[eid] = EpisodeTrace(eid, Dw, z[i0 : i0 + H + 1], detw, end, tau_A)
     return pd.DataFrame(rows), traces
 
 
@@ -260,12 +282,39 @@ def _ball_speed(td: TeamData, i0: int, p: ReorgParams) -> float:
     return float(np.mean(np.hypot(vx, vy)))
 
 
-def team_taus(match_data: list, ref: Reference, params: ReorgParams) -> dict[int, float]:
+def team_taus(
+    match_data: list, ref: Reference, params: ReorgParams, continuous: bool = True
+) -> dict[int, float]:
     """tau per team: ``tau_quantile`` of D over all of the team's organised frames."""
     w = np.array([params.weights[k] for k in ref.components])
     vals: dict[int, list] = {}
     for md in match_data:
         for tid, td in md.teams.items():
-            D = shape_distance(z_scores(td, ref), w)
+            D = shape_distance(z_scores(td, ref, continuous), w)
             vals.setdefault(tid, []).append(D[td.organised & np.isfinite(D)])
     return {t: float(np.quantile(np.concatenate(v), params.tau_quantile)) for t, v in vals.items()}
+
+
+def team_summary(episodes: pd.DataFrame, horizons_s=(3.0, 6.0, 10.0)) -> pd.DataFrame:
+    """Per losing team: losses, share suffered while organised (D0 <= tau, D-015), and the
+    cumulative incidence of reorganisation / regain at ``horizons_s`` among disorganised losses."""
+    from reorg.survival import cumulative_incidence
+
+    rows = []
+    grid = np.asarray(horizons_s, float)
+    for tid, g in episodes[np.isfinite(episodes["D0"])].groupby("losing_team_id"):
+        dis = g[g["disorganised_at_loss"]]
+        row = {
+            "losing_team_id": tid,
+            "matches": g["match_id"].nunique(),
+            "losses": len(g),
+            "share_organised_at_loss": float(1 - g["disorganised_at_loss"].mean()),
+            "disorganised_losses": len(dis),
+        }
+        if len(dis):
+            c = cumulative_incidence(dis["time_s"], dis["code"], grid)
+            for h, a, b in zip(horizons_s, c["cif_1"], c["cif_2"], strict=True):
+                row[f"reorg_by_{h:g}s"] = float(a)
+                row[f"regain_by_{h:g}s"] = float(b)
+        rows.append(row)
+    return pd.DataFrame(rows)

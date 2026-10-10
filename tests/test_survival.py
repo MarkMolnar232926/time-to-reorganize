@@ -44,3 +44,44 @@ def test_bootstrap_brackets_estimate():
     )
     out = bootstrap_cif(df, np.array([5.0, 10.0]), n_boot=50, seed=0)
     assert (out["cif_1_lo"] <= out["cif_1"]).all() and (out["cif_1"] <= out["cif_1_hi"]).all()
+
+
+def _cif_loop(time, code, grid, causes=(1, 2)):
+    """Reference textbook loop (the original implementation)."""
+    from reorg.survival import _step_eval
+
+    time = np.asarray(time, float)
+    code = np.asarray(code, int)
+    ut = np.unique(time[code > 0])
+    S, cif, vals, svals = 1.0, {c: 0.0 for c in causes}, {c: [] for c in causes}, []
+    for t in ut:
+        n = np.sum(time >= t)
+        at = time == t
+        d_all = np.sum(at & (code > 0))
+        for c in causes:
+            cif[c] += S * np.sum(at & (code == c)) / n
+            vals[c].append(cif[c])
+        S *= 1 - d_all / n
+        svals.append(S)
+    out = {"t": grid}
+    for c in causes:
+        out[f"cif_{c}"] = _step_eval(ut, np.asarray(vals[c]), grid, 0.0)
+    out["surv"] = _step_eval(ut, np.asarray(svals), grid, 1.0)
+    return pd.DataFrame(out)
+
+
+def test_vectorised_cif_is_bit_identical_to_loop():
+    rng = np.random.default_rng(5)
+    grid = np.round(np.arange(0, 20.01, 0.1), 1)
+    for _ in range(20):
+        n = rng.integers(5, 400)
+        t = np.round(rng.uniform(0, 20, n), 1)  # tenth-of-second ties, as in real data
+        c = rng.choice([0, 1, 2], n)
+        a = cumulative_incidence(t, c, grid)
+        b = _cif_loop(t, c, grid)
+        assert all(np.array_equal(a[k].to_numpy(), b[k].to_numpy()) for k in a.columns)
+
+
+def test_cif_with_no_events():
+    out = cumulative_incidence(np.array([1.0, 2.0]), np.array([0, 0]), np.array([0.0, 5.0]))
+    assert (out["cif_1"] == 0).all() and (out["surv"] == 1).all()
