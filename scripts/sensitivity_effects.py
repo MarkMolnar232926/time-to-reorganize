@@ -12,6 +12,7 @@ Usage: python scripts/sensitivity_effects.py [--config config.yaml]
 from __future__ import annotations
 
 import argparse
+import multiprocessing as mp
 from pathlib import Path
 
 import pandas as pd
@@ -32,9 +33,35 @@ from reorg.validation import (
 ROOT = Path(__file__).resolve().parents[1]
 
 
+_STATE: dict = {}  # filled before forking; read by worker processes
+
+
+def _one(item: tuple) -> dict:
+    name, v = item
+    mds, cc, seed, lm = _STATE["mds"], _STATE["cc"], _STATE["seed"], _STATE["lm"]
+    s = landmark(episodes_with_outcome(mds, mds, v), lm)
+    h2 = h2_effect(s, cc["n_boot"], seed, cc["min_events_full_model"])
+    pred = s[["match_id", "frame_loss", "y"]].copy()
+    for m, X in (("M_cov", COVARIATES), ("M_D", ["still_disorganised", *COVARIATES])):
+        pred[m] = stats.lomo_predict(s, "y", X)
+    h4 = compare(pred, "M_D", "M_cov", cc["n_boot"], seed)
+    return {
+        "variant": name,
+        "episodes": h2["episodes"],
+        "events": h2["events"],
+        "h2_or": h2["or"],
+        "h2_lo": h2["lo"],
+        "h2_hi": h2["hi"],
+        "h4_dlogloss": h4["dlogloss"],
+        "h4_lo": h4["dlogloss_lo"],
+        "h4_hi": h4["dlogloss_hi"],
+    }
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default=str(ROOT / "config.yaml"))
+    ap.add_argument("--workers", type=int, default=4, help="variants in parallel")
     a = ap.parse_args()
     cfg = yaml.safe_load(Path(a.config).read_text())
     cc = cfg["confirmatory"]
@@ -44,28 +71,15 @@ def main() -> None:
     out = ROOT / "outputs" / "sensitivity"
     out.mkdir(parents=True, exist_ok=True)
     mds = [prepare_match(root, m, cfg, cache) for m in list_match_ids(root)]
-    rows = []
-    for name, v in sensitivity_variants(cfg):
-        s = landmark(episodes_with_outcome(mds, mds, v), lm)
-        h2 = h2_effect(s, cc["n_boot"], seed, cc["min_events_full_model"])
-        pred = s[["match_id", "frame_loss", "y"]].copy()
-        for m, X in (("M_cov", COVARIATES), ("M_D", ["still_disorganised", *COVARIATES])):
-            pred[m] = stats.lomo_predict(s, "y", X)
-        h4 = compare(pred, "M_D", "M_cov", cc["n_boot"], seed)
-        rows.append(
-            {
-                "variant": name,
-                "episodes": h2["episodes"],
-                "events": h2["events"],
-                "h2_or": h2["or"],
-                "h2_lo": h2["lo"],
-                "h2_hi": h2["hi"],
-                "h4_dlogloss": h4["dlogloss"],
-                "h4_lo": h4["dlogloss_lo"],
-                "h4_hi": h4["dlogloss_hi"],
-            }
-        )
-        print(rows[-1], flush=True)
+    _STATE.update(mds=mds, cc=cc, seed=seed, lm=lm)
+    variants = sensitivity_variants(cfg)
+    if a.workers > 1 and "fork" in mp.get_all_start_methods():
+        with mp.get_context("fork").Pool(a.workers) as pool:
+            rows = pool.map(_one, variants)  # order preserved; each variant is deterministic
+    else:
+        rows = [_one(x) for x in variants]
+    for r in rows:
+        print(r, flush=True)
     tab = pd.DataFrame(rows)
     tab.to_csv(out / "effects.csv", index=False)
     t = tab.round(4)
