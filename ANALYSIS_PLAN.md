@@ -135,3 +135,9 @@ logged below and in `DECISIONS.md`, and results affected by a deviation are labe
 - 2026-10-09: **FROZEN** (GATE 2 approved). Baseline c (rβ) dropped under the rule above.
 - 2026-10-09: confirmatory run completed (`scripts/confirmatory.py`, commit `63d71cc`, written
   before the run). Results are in `docs/confirmatory_generated.md`. No deviations from the plan.
+- 2026-10-10: pre-registered sensitivity of the H2/H4 primary effects run (§6,
+  `docs/sensitivity_effects_generated.md`). Implementation detail the plan did not fix: the
+  variants use the reference built from all 20 games (shape data only), while the H4 models are
+  still validated leave-one-match-out. Result: H2 OR 1.11–1.66 across the 10 variants, with the CI
+  excluding 1 only for τ = 0.80. H4 shows no gain in any variant. Confirmatory conclusions
+  unchanged.

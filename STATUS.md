@@ -2,6 +2,16 @@
 
 _Last updated: 9 Oct 2026. GATE 2 passed (plan frozen). Confirmatory results in. **Phase 3 in progress** (D-023 to D-025: new headline, coach-facing tool first)._
 
+## Phase 3 progress (10 Oct)
+- Validation code moved to `reorg.validation`, with parallel folds. The confirmatory re-run gave
+  identical results (only the runtime line changed). Statistics sped up with bit-identical results
+  (permutation test 264 s → 52 s).
+- Pre-registered effect sensitivity done: conclusions robust (see ANALYSIS_PLAN changelog).
+- Coach-facing team cards (`reorg team-cards`) and episode viewer (`reorg episode`) done. Cards
+  are descriptive, carry the H1 caveat, and show no interval for single-game teams.
+- Figure 1 (`docs/figure1.png`) and Table 1 (`docs/table1.md`) drafted (`scripts/make_figures.py`).
+- Next: clean Docker run of `run_all.sh`, then the README (Phase 4).
+
 ## Confirmatory results (9 Oct, Holm-corrected)
 - H3 confirmed: goal-side count carries the most remaining disorganisation (32% of D² at +6 s,
   robust to the floor).
