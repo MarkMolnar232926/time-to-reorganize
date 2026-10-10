@@ -86,5 +86,5 @@ Out-of-fold AUC / log-loss per model (all regime):
 | H1 | 0.2332 | 0.4663 | False |
 | H4 | 0.5917 | 0.5917 | False |
 
-Runtime: 2508 s.
+Runtime: 1594 s.
 
