@@ -135,3 +135,20 @@ in its block can still read D > τ while it is in one of its looser calm moments
 waiting for a "tight enough" moment. This is visible in the synthetic test, where the true arrival
 is 5 s and some episodes read about 10 s. It is intended (τ is defined from the team's own calm
 defending), but it is why the τ quantile is in the sensitivity grid. *(noted)*
+
+---
+## Phase 3
+
+**D-023. Headline story after the confirmatory results: "what goes wrong after losing the ball".**
+The confirmed finding is H3: getting players back behind the ball is the dominant remaining
+problem. H2 (3 s landmark) is reported as a probable but unproven effect (OR 1.34 [0.95, 2.02]),
+team rankings as "not reliable yet with 20 games" (H1), and H4 as "no predictive gain over simple
+context; SkillCorner's phase label predicts better". The analysis plan is unchanged. Only the
+framing of the write-up follows the results. *(approved by Mark, 10 Oct)*
+
+**D-024. The 6 s landmark result (OR 2.55 [1.96, 3.42]) is presented only as a pre-specified
+secondary result,** with the caveat that part of the association may run in reverse (an attack
+that is already succeeding keeps the defence stretched). *(approved by Mark, 10 Oct)*
+
+**D-025. Phase 3 focus: coach-facing tool** (per-team "what goes wrong" profiles, episode viewer
+and animations) ahead of deeper exploratory modelling. *(approved by Mark, 10 Oct)*

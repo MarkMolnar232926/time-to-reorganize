@@ -2,8 +2,7 @@
 
 Outputs: outputs/confirmatory/*.csv and docs/confirmatory_generated.md.
 Usage: python scripts/confirmatory.py [--config config.yaml]
-Runtime: roughly 15-25 min on a laptop (20 leave-one-match-out folds with the reference rebuilt
-inside each fold).
+Runtime: about 40 min single-process; folds run in parallel with --workers (default 4).
 """
 
 from __future__ import annotations
@@ -19,48 +18,20 @@ import yaml
 
 from reorg import stats
 from reorg.io import list_match_ids
-from reorg.outcomes import OutcomeParams, add_danger, landmark_sample
 from reorg.pipeline import prepare_match
-from reorg.reference import build_reference, organised_frames
-from reorg.reorganisation import ReorgParams, episodes_for_match, team_taus
 from reorg.shape import COMPONENTS
+from reorg.validation import (
+    MODELS,
+    Variant,
+    compare,
+    cv_predictions,
+    episodes_with_outcome,
+    fit_reference,
+    h2_effect,
+    landmark,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
-
-# H2 covariates (ANALYSIS_PLAN.md §5, H2): 5 adjustment terms + the exposure.
-COVARIATES = ["ball_x", "wide_channel", "goal_side_at_loss", "ball_speed_3s", "log1p_poss"]
-REDUCED_COVARIATES = ["ball_x", "goal_side_at_loss"]
-ZONE = ["ball_x", "wide_channel"]
-
-
-def features(e: pd.DataFrame) -> pd.DataFrame:
-    e = e.copy()
-    e["wide_channel"] = ((e["cell"] % 3) != 1).astype(int)
-    e["log1p_poss"] = np.log1p(e["a_possession_s"])
-    return e
-
-
-def fit_reference(mds_ref, cfg, P):
-    ref = build_reference(organised_frames(mds_ref), cfg)
-    return ref, team_taus(mds_ref, ref, P)
-
-
-def episodes(mds_ref, mds_eval, cfg, P, OP, min_frame_det=None, fitted=None):
-    """Reference and tau from ``mds_ref`` (or ``fitted``); episodes (+ danger) for ``mds_eval``."""
-    ref, taus = fitted or fit_reference(mds_ref, cfg, P)
-    out = []
-    for md in mds_eval:
-        e = episodes_for_match(md, ref, taus, P, min_frame_det=min_frame_det)[0]
-        out.append(add_danger(md, e, OP))
-    return features(pd.concat(out, ignore_index=True))
-
-
-def landmark(e: pd.DataFrame, lm: float) -> pd.DataFrame:
-    s = landmark_sample(e, lm)
-    s = s[np.isfinite(s[COVARIATES]).all(axis=1)].copy()
-    s["nn_mean"] = s[f"nn_mean_0_{lm:g}s"]
-    s["phase_org"] = s[f"phase_organised_at_{lm:g}s"].astype(int)
-    return s
 
 
 def md_table(df: pd.DataFrame, digits: int = 3) -> str:
@@ -74,29 +45,18 @@ def md_table(df: pd.DataFrame, digits: int = 3) -> str:
 
 
 def h2(sample: pd.DataFrame, cc: dict, seed: int, exposure: str = "still_disorganised") -> dict:
-    n_events = int(sample["y"].sum())
-    cov = COVARIATES if n_events >= cc["min_events_full_model"] else REDUCED_COVARIATES
-    X = [exposure, *cov]
-    r = stats.cluster_bootstrap_or(sample, "y", X, exposure, cc["n_boot"], seed)
-    r.update(
-        {
-            "episodes": len(sample),
-            "events": n_events,
-            "model": "full" if cov is COVARIATES else "reduced",
-            "p_one_sided": stats.wald_one_sided_p(sample, "y", X, exposure, "match_id"),
-        }
-    )
-    return r
+    return h2_effect(sample, cc["n_boot"], seed, cc["min_events_full_model"], exposure)
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default=str(ROOT / "config.yaml"))
+    ap.add_argument("--workers", type=int, default=4, help="parallel folds (results do not change)")
     a = ap.parse_args()
     cfg = yaml.safe_load(Path(a.config).read_text())
     cc = cfg["confirmatory"]
     seed = int(cfg["prototype"]["seed"])
-    P, OP = ReorgParams.from_config(cfg), OutcomeParams.from_config(cfg)
+    v = Variant(cfg)
     det_thr = float(cfg["reliability"]["frame_min_detected"])
     rel_thr = float(cfg["reliability"]["episode_min_reliability"])
     out = ROOT / "outputs" / "confirmatory"
@@ -110,9 +70,9 @@ def main() -> None:
         names[md.meta.away_team_id] = md.meta.away_team_name
 
     # Full-data episodes (H1, H2, H3, H5-for-H2).
-    full = fit_reference(mds, cfg, P)
-    e_all = episodes(mds, mds, cfg, P, OP, fitted=full)
-    e_det = episodes(mds, mds, cfg, P, OP, min_frame_det=det_thr, fitted=full)
+    full = fit_reference(mds, v)
+    e_all = episodes_with_outcome(mds, mds, v, fitted=full)
+    e_det = episodes_with_outcome(mds, mds, v, min_frame_det=det_thr, fitted=full)
     e_all.to_csv(out / "episodes_with_outcome.csv", index=False)
     dis = e_all[e_all["disorganised_at_loss"]]
     lines = [
@@ -189,7 +149,7 @@ def main() -> None:
     sh3 = stats.component_shares(dis, COMPONENTS, h, cc["n_boot"], seed)
     cfg_f = copy.deepcopy(cfg)
     cfg_f["reference"]["spread_floor"]["goal_side"] = 1.0
-    e_f = episodes(mds, mds, cfg_f, P, OP)
+    e_f = episodes_with_outcome(mds, mds, Variant(cfg_f))
     sh3f = stats.component_shares(
         e_f[e_f["disorganised_at_loss"]], COMPONENTS, h, cc["n_boot"], seed
     )
@@ -211,46 +171,14 @@ def main() -> None:
 
     # ---------------------------------------------------------------- H4 (+ H5) LOMO
     lm = float(cfg["outcomes"]["landmarks_s"][0])
-    models = {
-        "M_zone": ZONE,
-        "M_cov": COVARIATES,
-        "M_D": ["still_disorganised", *COVARIATES],
-        "M_compact": ["nn_mean", *COVARIATES],
-        "M_phase": ["phase_org", *COVARIATES],
-        "M_compact+D": ["nn_mean", "still_disorganised", *COVARIATES],
-        "M_phase+D": ["phase_org", "still_disorganised", *COVARIATES],
-    }
-    preds = {reg: [] for reg in ("all", "detected", "reliable")}
-    ids = [md.meta.match_id for md in mds]
-    for k, mid in enumerate(ids):
-        train = [md for md in mds if md.meta.match_id != mid]
-        test = [md for md in mds if md.meta.match_id == mid]
-        fitted = fit_reference(train, cfg, P)
-        cache_eps = {}
-        for reg in ("all", "detected", "reliable"):
-            mfd = det_thr if reg == "detected" else None
-            key = "detected" if reg == "detected" else "all"
-            if key not in cache_eps:
-                cache_eps[key] = (
-                    landmark(episodes(train, train, cfg, P, OP, mfd, fitted), lm),
-                    landmark(episodes(train, test, cfg, P, OP, mfd, fitted), lm),
-                )
-            tr, te = cache_eps[key]
-            if reg == "reliable":
-                tr = tr[tr["reliability_10s"] >= rel_thr]
-                te = te[te["reliability_10s"] >= rel_thr]
-            if te.empty:
-                continue
-            row = te[["match_id", "frame_loss", "y"]].copy()
-            for name, X in models.items():
-                if reg != "all" and name not in ("M_cov", "M_D"):
-                    continue
-                fit = stats.fit_logit(tr, "y", X)
-                row[name] = fit.predict(
-                    stats.sm.add_constant(te[X].astype(float), has_constant="add")
-                ).to_numpy()
-            preds[reg].append(row)
-        print(f"fold {k + 1}/{len(ids)} done ({time.time() - t0:.0f} s)", flush=True)
+    models = MODELS
+
+    def progress(k: int, n: int) -> None:
+        print(f"fold {k}/{n} done ({time.time() - t0:.0f} s)", flush=True)
+
+    preds = cv_predictions(
+        mds, v, lm, det_thr, rel_thr, folds=0, workers=a.workers, progress=progress
+    )
     comp_rows = []
     pairs_all = [
         ("M_D", "M_cov", "primary"),
@@ -261,40 +189,17 @@ def main() -> None:
         ("M_phase+D", "M_phase", "secondary"),
     ]
     h4_p = {}
-    for reg, rows in preds.items():
-        pr = pd.concat(rows, ignore_index=True)
+    for reg, pr in preds.items():
         pr.to_csv(out / f"h4_predictions_{reg}.csv", index=False)
-        y, cl = pr["y"].to_numpy(), pr["match_id"].to_numpy()
         for a_, b_, role in pairs_all if reg == "all" else [("M_D", "M_cov", "primary")]:
-            d = stats.paired_metric_diff(
-                y, pr[a_].to_numpy(), pr[b_].to_numpy(), cl, cc["n_boot"], seed
-            ).set_index("metric")
-            p = stats.bootstrap_one_sided_p(
-                y, pr[a_].to_numpy(), pr[b_].to_numpy(), cl, cc["n_boot"], seed
-            )
+            r = compare(pr, a_, b_, cc["n_boot"], seed)
             if reg == "all" and role == "primary":
-                h4_p["H4"] = p
-            comp_rows.append(
-                {
-                    "regime": reg,
-                    "comparison": f"{a_} vs {b_}",
-                    "role": role,
-                    "episodes": len(pr),
-                    "events": int(y.sum()),
-                    "dlogloss": d.loc["log_loss", "diff"],
-                    "dlogloss_lo": d.loc["log_loss", "lo"],
-                    "dlogloss_hi": d.loc["log_loss", "hi"],
-                    "p_one_sided": p,
-                    "dbrier": d.loc["brier", "diff"],
-                    "dauc": d.loc["auc", "diff"],
-                    "dauc_lo": d.loc["auc", "lo"],
-                    "dauc_hi": d.loc["auc", "hi"],
-                }
-            )
+                h4_p["H4"] = r["p_one_sided"]
+            comp_rows.append({"regime": reg, "role": role, **r})
     h4_tab = pd.DataFrame(comp_rows)
     h4_tab.to_csv(out / "h4.csv", index=False)
     auc_tab = []
-    pr_all = pd.concat(preds["all"], ignore_index=True)
+    pr_all = preds["all"]
     for name in models:
         auc_tab.append(
             {

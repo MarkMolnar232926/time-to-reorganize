@@ -1,6 +1,6 @@
 # Status
 
-_Last updated: 9 Oct 2026. GATE 2 passed (plan frozen). **Confirmatory results are in (`docs/confirmatory_generated.md`), waiting for Mark's direction on framing.**_
+_Last updated: 9 Oct 2026. GATE 2 passed (plan frozen). Confirmatory results in. **Phase 3 in progress** (D-023 to D-025: new headline, coach-facing tool first)._
 
 ## Confirmatory results (9 Oct, Holm-corrected)
 - H3 confirmed: goal-side count carries the most remaining disorganisation (32% of D² at +6 s,
