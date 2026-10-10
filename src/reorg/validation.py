@@ -201,8 +201,8 @@ def compare(pred: pd.DataFrame, a: str, b: str, n_boot: int, seed: int) -> dict:
     """Out-of-fold log-loss / Brier / AUC differences (a - b) with match-cluster bootstrap."""
     y, cl = pred["y"].to_numpy(), pred["match_id"].to_numpy()
     d = stats.paired_metric_diff(y, pred[a].to_numpy(), pred[b].to_numpy(), cl, n_boot, seed)
+    p = d.attrs["p_log_loss_ge_0"]  # same resamples as the CI (equal to bootstrap_one_sided_p)
     d = d.set_index("metric")
-    p = stats.bootstrap_one_sided_p(y, pred[a].to_numpy(), pred[b].to_numpy(), cl, n_boot, seed)
     return {
         "comparison": f"{a} vs {b}",
         "episodes": len(pred),

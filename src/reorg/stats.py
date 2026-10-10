@@ -41,14 +41,23 @@ def permutation_team_effect(
     rng = np.random.default_rng(seed)
     obs = float(team_cif(df, horizon_s).var())
     pairs = df.groupby("match_id")[["losing_team_id", "gaining_team_id"]].first()
+    # Array version of "relabel, then team_cif(...).var()": same draws, same per-team CIF
+    # function and the same pandas variance, without copying the table each round.
+    t = df["time_s"].to_numpy()
+    c = df["code"].to_numpy()
+    lose = df["losing_team_id"].to_numpy()
+    gain = df["gaining_team_id"].to_numpy()
+    match_pos = pd.Index(pairs.index).get_indexer(df["match_id"])
+    g = np.array([horizon_s])
     perm_stats = np.empty(n_perm)
     for b in range(n_perm):
         swap = rng.random(len(pairs)) < 0.5
-        flip = pairs.index[swap]
-        d = df.copy()
-        m = d["match_id"].isin(flip)
-        d.loc[m, ["losing_team_id"]] = d.loc[m, "gaining_team_id"].to_numpy()
-        perm_stats[b] = team_cif(d, horizon_s).var()
+        lab = np.where(swap[match_pos], gain, lose)
+        vals = [
+            float(cumulative_incidence(t[lab == k], c[lab == k], g)["cif_1"].iloc[0])
+            for k in np.unique(lab)
+        ]
+        perm_stats[b] = pd.Series(vals).var()
     p = (1 + np.sum(perm_stats >= obs)) / (1 + n_perm)
     return {"statistic": obs, "null_mean": float(perm_stats.mean()), "p_value": float(p)}
 
@@ -149,7 +158,11 @@ def paired_metric_diff(
     for k in fns:
         lo, hi = np.nanpercentile(boots[k], [2.5, 97.5])
         rows.append({"metric": k, "diff": est[k], "lo": float(lo), "hi": float(hi)})
-    return pd.DataFrame(rows)
+    out = pd.DataFrame(rows)
+    # One-sided p for "a has lower log-loss than b", from the same resamples (+1 correction).
+    ll = np.asarray(boots["log_loss"])
+    out.attrs["p_log_loss_ge_0"] = float((1 + np.sum(ll >= 0)) / (1 + n_boot))
+    return out
 
 
 # ----------------------------------------------------------------------------------------- H3

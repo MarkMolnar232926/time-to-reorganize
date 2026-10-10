@@ -102,3 +102,13 @@ def test_holm_matches_hand_computation():
 def test_wald_one_sided_p_small_for_true_positive_effect():
     df = logit_data()
     assert stats.wald_one_sided_p(df, "y", ["x", "z"], "x", "match_id") < 1e-6
+
+
+def test_paired_diff_p_equals_separate_bootstrap_p():
+    df = logit_data()
+    y = df["y"].to_numpy().astype(int)
+    p_a = stats.lomo_predict(df, "y", ["z"])
+    p_b = stats.lomo_predict(df, "y", ["x", "z"])
+    cl = df["match_id"].to_numpy()
+    d = stats.paired_metric_diff(y, p_a, p_b, cl, 200, 7)
+    assert d.attrs["p_log_loss_ge_0"] == stats.bootstrap_one_sided_p(y, p_a, p_b, cl, 200, 7)
